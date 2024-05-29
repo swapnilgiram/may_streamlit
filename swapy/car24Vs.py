@@ -1,53 +1,53 @@
 import pandas as pd
 import streamlit as st
+import datetime
+import pickle
+from sklearn.linear_model import LinearRegression
+
+cars_df = pd.read_excel("C:\Users\Swapnil\Downloads\cars24-car-price.xlsx")
 
 st.write(
     """
-        # This is my Heading
-
-        This is some description of my app
+     # Cars24 Used Car Price Prediction
     """
 )
+st.dataframe(cars_df.head())
 
+## Encoding Categorical features
+encode_dict = {
+    "fuel_type": {'Diesel': 1, 'Petrol': 2, 'CNG': 3, 'LPG': 4, 'Electric': 5},
+    "seller_type": {'Dealer': 1, 'Individual': 2, 'Trustmark Dealer': 3},
+    "transmission_type": {'Manual': 1, 'Automatic': 2}
+}
+
+
+def model_pred(fuel_type, transmission_type, engine, seats):
+    ## loading the model
+    with open("C:\Users\Swapnil\Downloads\car_pred (1)", 'rb') as file:
+        reg_model = pickle.load(file)
+
+        input_features = [[2018.0, 1, 4000, fuel_type, transmission_type, 19.70, engine, 86.30, seats]]
+
+        return reg_model.predict(input_features)
+
+## Formatting and adding dropdowns and sliders
 col1, col2 = st.columns(2)
 
-import datetime
+fuel_type = col1.selectbox("Select the fuel type",
+                           ["Diesel", "Petrol", "CNG", "LPG", "Electric"])
 
-with col1:
-    start_date = st.date_input("Please enter Starting Date",
-                               datetime.date(2019, 1, 1))
+engine = col1.slider("Set the Engine Power",
+                     500, 5000, step=100)
 
-with col2:
-    end_date = st.date_input("Please enter End Date",
-                             datetime.date(2022, 12, 31))
+transmission_type = col2.selectbox("Select the transmission type",
+                                   ["Manual", "Automatic"])
 
-import yfinance as yf
+seats = col2.selectbox("Enter the number of seats",
+                       [4,5,7,9,11])
 
-ticker_symbol = st.text_input("Enter Stock Symbol",
-                              "AAPL",
-                              key="placeholder")
+if (st.button("Predict Price")):
+    fuel_type = encode_dict['fuel_type'][fuel_type]
+    transmission_type = encode_dict['transmission_type'][transmission_type]
 
-ticker_data = yf.Ticker(ticker_symbol)
-ticker_df = ticker_data.history(period="1d", start=f"{start_date}",
-                                end=f"{end_date}")
-
-st.write(
-    f"""
-       ## {ticker_symbol}'s EOD Price 
-    """
-)
-st.dataframe(ticker_df)
-
-st.write(
-    """
-       ## Daily Closing Price Chart
-    """
-)
-st.line_chart(ticker_df.Close)
-
-st.write(
-    """
-        ## Volume of Shares Traded Each Day
-    """
-)
-st.line_chart(ticker_df.Volume)
+    price = model_pred(fuel_type, transmission_type, engine, seats)
+    st.text("Predicted Price of the car is: " + str(price))
